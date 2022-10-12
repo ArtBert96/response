@@ -1,0 +1,276 @@
+---
+title: "MGM_G"
+output:
+  html_document: default
+  pdf_document: default
+date: '2022-10-07'
+---
+# Packages
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(stats)
+library(rio)
+library(tidyverse)
+library(dplyr)
+library(lavaan)
+library(mgm) 
+library(qgraph)
+library(dplyr)
+library(haven)
+library(Matrix)
+library(igraph)
+library(NetworkComparisonTest)
+library(plyr)
+library(bootnet)
+library(openxlsx)
+library(matrixcalc)
+library(IsingSampler)
+library(IsingFit)
+library(xtable)
+library(ltm)
+```
+
+# Import MGM_G
+```{r}
+MGM_G <- import("../input/MGM_G.csv")
+```
+
+# Create objects
+```{r}
+type <- c(
+  "g","g","g","g","g","g","g")
+
+level <- c(
+  1,1,1,1,1,1,1)
+
+shortnames <- c(
+  "Con",
+  "LR",
+  "comp_",
+  "w2r_",
+  "in_tr_",
+  "reg_",
+  "risk_")
+
+longnames <- c(
+  "Support for Conte",
+  "L-R self/placement",
+  "Compliance to preventive behaviors",
+  "Willingness to restrict freedoms",
+  "Institutional trust",
+  "Support for regional system",
+  "Risk perception")
+```
+
+# Fit model
+```{r}
+set.seed(1)
+FitMGM_G <- mgm(MGM_G, type, level, k = 2, binarySign = TRUE)
+```
+
+# Preliminary graph
+```{r}
+#raw graph
+set.seed(1)
+qgraph(FitMGM_G$pairwise$wadj, 
+       layout = "spring",
+       theme = "colorblind",
+       edge.color = FitMGM_G$pairwise$edgecolor,
+       labels = shortnames, nodeNames = longnames, vsize=6.0,
+       title = "Raw graph", edge.labels=FALSE, 
+       legend = TRUE, legend.cex = 0.3)
+```
+# Community detection
+```{r}
+##Create function Community stability
+communityStability <- function(data, type, level, iterations)
+{
+  
+  communityMemberships <- list()
+  
+  for (i in 1:iterations)
+  {
+    fitGraph <- mgm(data, type, level, k = 2, verbatim = TRUE)
+    iGraph<- graph_from_adjacency_matrix(abs
+                                         (fitGraph$pairwise$wadj), "undirected", weighted =
+                                           TRUE)
+    communityMemberships[[i]] <- cluster_walktrap(iGraph)$membership
+  }
+  
+  communityOverlap <- matrix(NA, length(data), length(data))
+  
+  for(j in 1:length(data))
+  {
+    
+    overlapPerNode <- matrix(NA, iterations, ncol(communityOverlap))
+    
+    for(k in 1: iterations)
+    {
+      overlapPerNode[k,] <- as.numeric(communityMemberships[[k]][j] == communityMemberships[[k]])
+    }
+    
+    communityOverlap[j,] <- apply(overlapPerNode, 2, mean)
+  }
+  
+  diag(communityOverlap) <- 0
+  
+  return(list(communityMemberships = communityMemberships, communityOverlap = communityOverlap))
+  
+}
+```
+
+Now I apply the function. I reduce the number of iteration from 1000 to 100 
+due to my limited computational power.
+```{r}
+#apply function
+CommunityStabTotal<-communityStability(MGM_G, type, level, it=100)
+```
+
+```{r}
+# Visualize community stability
+qgraph(CommunityStabTotal$communityOverlap, layout = "spring", 
+       theme = "colorblind", labels = shortnames,
+       nodeNames = longnames,vsize=6.0,
+       title = "Community Stability with indices", 
+       edge.labels=FALSE, legend = TRUE, legend.cex = 0.3)
+```
+
+```{r}
+# Vizualise detected communities
+inputCommDetection_total<-CommunityStabTotal$communityOverlap
+inputCommDetection_total[which(inputCommDetection_total <= .90)] <- 0
+
+qgraph(inputCommDetection_total, layout = "spring", theme = "colorblind",
+       labels = shortnames, nodeNames = longnames,vsize=6.0,
+       title = "Detected communities", edge.labels=FALSE, 
+       legend = TRUE, legend.cex = 0.3)
+```
+
+```{r}
+# group variables based on outcome detection community stability so we can assign colors
+Totalgroup_comm <- list(
+ " "=c(3,4),
+ " "=c(1,2,5,6,7))
+
+# define nice colors
+Totalgroup_cols <- c("#E8ED61","#8FC45A")
+```
+
+# Final Graph
+```{r}
+#a better graph (only communities missing)
+#enables theme colorblind because we don't need to specify edge.color
+inputGraphMGM_G <- FitMGM_G$pairwise$wadj
+signsGraphMGM_G <- FitMGM_G$pairwise$signs
+signsGraphMGM_G[which(is.na(signsGraphMGM_G))] <- 1
+inputGraphMGM_G <- inputGraphMGM_G*signsGraphMGM_G
+
+# refined, no minimum 
+pdf(file = '../Output/MGM_G/MGM_G no min.pdf',paper = "USr", height = 9, width = 12)
+GraphMGM_G<-qgraph(inputGraphMGM_G, 
+  layout = "spring", theme = "colorblind", 
+  labels = shortnames,nodeNames = longnames,
+  cut = 0.10, maximum = 1, 
+  details = FALSE, vsize=6.0, legend = TRUE, 
+  groups=Totalgroup_comm, color= Totalgroup_cols,
+  legend.cex = 0.4, title = "MGM_G no min")
+dev.off()
+```
+
+```{r}
+# refined,  minimum = 0.5
+pdf(file = '../Output/MGM_G/MGM_G min 0.05.pdf',paper = "USr", height = 9, width = 12)
+GraphMGM_G<-qgraph(inputGraphMGM_G, 
+  layout = "spring", theme = "colorblind", 
+  labels = shortnames,nodeNames = longnames,
+  cut = 0.10, minimum = 0.05, maximum = 1, 
+  details = FALSE, vsize=6.0, legend = TRUE, 
+  groups=Totalgroup_comm, color= Totalgroup_cols,
+  legend.cex = 0.5, title = "MGM_G min 0.05")
+dev.off()
+```
+
+```{r}
+# refined,  minimum = 0.10
+pdf(file = '../Output/MGM_G/MGM_G min 0.10.pdf',paper = "USr", height = 9, width = 12)
+GraphMGM_G<-qgraph(inputGraphMGM_G, 
+  layout = "spring", theme = "colorblind", 
+  labels = shortnames,nodeNames = longnames,
+  cut = 0.10, minimum = 0.10, maximum = 1, 
+  details = FALSE, vsize=6.0, legend = TRUE,
+  groups=Totalgroup_comm, color= Totalgroup_cols,
+  legend.cex = 0.5, title = "MGM_G min 0.10")
+dev.off()
+```
+
+# Centrality estimates
+```{r}
+#graph with complete labels for centrality plot
+GraphMGM_G_CENT<-qgraph(inputGraphMGM_G, 
+  layout = "spring", theme = "colorblind",
+  labels = longnames, minimum = 0,
+  cut = 0.10, maximum = 1, details = TRUE,
+  legend = FALSE, title = "Centrality table")
+```
+```{r}
+#centrality Total
+centMGM_G <- centralityTable(GraphMGM_G_CENT,standardized = FALSE)
+
+#CentralityPlot Total
+pdf('../Output/MGM_G/Centrality Table MGM_G.pdf')
+centralityPlot(GraphMGM_G_CENT, include = c("Strength"),scale = "raw")
+dev.off()
+```
+
+# ASPL
+```{r}
+#Shortest Path Lenght
+SPLMGM_G <- centrality(GraphMGM_G)$ShortestPathLengths
+SPLMGM_G <- SPLMGM_G[upper.tri(SPLMGM_G)]
+#Average shortest path length
+ASPL_MGM_G <- mean(SPLMGM_G)
+```
+ASPL = 8.564524
+
+# Stability of centrality measures
+Say you spot a node to be more central than other nodes. What is the stability 
+of the centrality estimates? Let's assess stability of the centrality index by 
+case-dropping subset bootstrap
+I reduce nBoots to 100, not 1k
+```{r}
+set.seed(1)
+MGM_G_CentStability <- bootnet(MGM_G, nBoots = 100, 
+default = "mgm", type = "case",
+statistics = c("Strength"), level = level, criterion="CV", binarySign=FALSE)
+corStability(MGM_G_CentStability)
+
+#plot
+plot(MGM_G_CentStability, subsetRange = c(100,50), statistics = c("Strength"),
+     labels = longnames)
+
+#plot ordered
+pdf('../Output/MGM_G/Centrality stability MGM_G.pdf', height = 70, width = 50)
+plot(MGM_G_CentStability, "Strength", perNode = TRUE, labels = longnames,
+     subsetRange = c(100,50))
+dev.off()
+
+```
+
+# Accuracy
+Say you spot a difference in edges, one thicker than the other: 
+Is it meaningfully stronger? Check accuracy assess the accuracy of estimated
+network connections --> Obtain confidence interval around estimated edge weight
+using nonparametric bootstrapping. I reduce again the nBoots from 1k to 100
+
+```{r}
+#Edge accuracy Total
+set.seed(1)
+Bootnet_MGM_G<- bootnet(MGM_G, nBoots = 100, 
+default = "mgm", level = level, criterion="CV", binarySign=FALSE, 
+labels = longnames)
+
+#pdf
+pdf('../Output/MGM_G/Edge accuracy MGM_G.pdf', height = 50, width = 50)
+plot(Bootnet_MGM_G, labels = TRUE, order = "sample", res=150)
+dev.off()
+
+```

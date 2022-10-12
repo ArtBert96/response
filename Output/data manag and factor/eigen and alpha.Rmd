@@ -1,0 +1,34 @@
+---
+title: "eigen and alpha tables"
+output: html_document
+date: '2022-10-09'
+---
+
+# Eigen
+
+ **Index**                          | **Eigenvalue comp.1** | **Eigenvalue comp.2** 
+:----------------------------------:|:---------------------:|:---------------------:
+ Compliance to preventive behaviors | 1.6                   | 0.7                   
+ Willingness to restrict freedoms   | 1.3                   | 0.5                   
+ Institutional trust                | 1.3                   | 0.6                   
+ Risk perception                    | 1.3                   | 0.7                   
+ Collectivism                       | 1.3                   | 0.6                   
+ Support for regional system        | 1.3                   | 0.7                   
+ Attitudes toward science           | 1.4                   | 0.8                   
+ Attitudes toward medicine          | 1.4                   | 0.8                   
+
+# Alpha
+ **Index**                          | **Cronbach's α** 
+:----------------------------------:|:----------------:
+ Compliance to preventive behaviors | 0.8              
+ Willingness to restrict freedoms   | 0.9              
+ Institutional trust                | 0.8              
+ Risk perception                    | 0.7              
+ Collectivism                       | 0.8              
+ Support for regional system        | 0.7              
+ Attitudes toward science           | 0.7              
+ Attitudes toward medicine          | 0.8   
+
+
+
+

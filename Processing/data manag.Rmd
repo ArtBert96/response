@@ -1,0 +1,760 @@
+---
+title: "Data managment and Factor analysis"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r include=FALSE}
+library(stats)
+library(rio)
+library(tidyverse)
+library(dplyr)
+library(lavaan)
+library(mgm) 
+library(qgraph)
+library(dplyr)
+library(haven)
+library(Matrix)
+library(igraph)
+library(NetworkComparisonTest)
+library(plyr)
+library(bootnet)
+library(openxlsx)
+library(matrixcalc)
+library(IsingSampler)
+library(IsingFit)
+library(stargazer)
+library(ltm)
+```
+
+# Starting from W1
+
+I already selected W1 from the total data
+
+```{r}
+getwd()
+W1 <- import("../input/W1.csv")
+```
+
+# CHA
+
+This dataset it's the biggest, I ll use it for mgm with full list of
+variables.
+
+```{r}
+#select right variables
+CHA <- W1 %>% dplyr::select(
+  s1,
+  s2,
+  b2_01,
+  b2_03,
+  b2_05,
+  b2_06,
+  c1, 
+  d1,
+  d2,
+  d4_01,
+  d4_02,
+  d5,
+  e1,
+  e2_01,
+  e2_04,
+  e3,
+  e4,
+  e5,
+  f2,
+  f3,
+  g1,
+  g2,
+  g6_01,
+  g6_02,
+  h1_01,
+  h1_02,
+  h1_03,
+  h1_04,
+  h1_05,
+  h1_06,
+  h1_07,
+  j3_03,
+  j3_04,
+  k2,
+  k1)
+```
+
+## Recode for CHA, MGM, MGM_G
+
+```{r}
+#recode them
+#sex
+CHA$s1 <- gsub ("Uomo", "1", as.character(CHA$s1))
+CHA$s1 <- gsub ("Donna", "0", as.character(CHA$s1))
+CHA$s1 <- as.numeric(CHA$s1)
+
+#age
+CHA$s2 <- as.numeric(CHA$s2)
+
+#Compliance, crowded places b2_01
+CHA$b2_01 <- gsub ("- Completamente", "", as.character(CHA$b2_01))
+CHA$b2_01 <- gsub ("- Per niente", "", as.character(CHA$b2_01))
+CHA$b2_01 <- gsub ("Non saprei", "NA", as.character(CHA$b2_01))
+CHA$b2_01[ CHA$b2_01 == "NA" ] <- NA
+CHA$b2_01 <- as.numeric(CHA$b2_01)
+
+#Compliance, social distance b2_03
+CHA$b2_03 <- gsub ("- Completamente", "", as.character(CHA$b2_03))
+CHA$b2_03 <- gsub ("- Per niente", "", as.character(CHA$b2_03))
+CHA$b2_03 <- gsub ("Non saprei", "NA", as.character(CHA$b2_03))
+CHA$b2_03[ CHA$b2_03 == "NA" ] <- NA
+CHA$b2_03 <- as.numeric(CHA$b2_03)
+
+#Compliance, hands b2_05
+CHA$b2_05 <- gsub ("- Completamente", "", as.character(CHA$b2_05))
+CHA$b2_05 <- gsub ("- Per niente", "", as.character(CHA$b2_05))
+CHA$b2_05 <- gsub ("Non saprei", "NA", as.character(CHA$b2_05))
+CHA$b2_05[ CHA$b2_05 == "NA" ] <- NA
+CHA$b2_05 <- as.numeric(CHA$b2_05)
+
+#Compliance, masks b2_06
+CHA$b2_06 <- gsub ("- Completamente", "", as.character(CHA$b2_06))
+CHA$b2_06 <- gsub ("- Per niente", "", as.character(CHA$b2_06))
+CHA$b2_06 <- gsub ("Non saprei", "NA", as.character(CHA$b2_06))
+CHA$b2_06[ CHA$b2_06 == "NA" ] <- NA
+CHA$b2_06 <- as.numeric(CHA$b2_06)
+
+#situa eco, c1
+CHA$c1 <- iconv(CHA$c1,"UTF-8","latin1")
+CHA$c1 <- gsub ("Non riusciamo ad arrivare a fine mese", "0", as.character(CHA$c1))
+CHA$c1 <- gsub ("Con qualche difficoltà", "1", as.character(CHA$c1))
+CHA$c1 <- gsub ("Con tranquillità", "2", as.character(CHA$c1))
+CHA$c1 <- gsub ("Agiatamente", "3", as.character(CHA$c1))
+CHA$c1 <- as.numeric(CHA$c1)
+
+#evaluation policies to fight covid by gov, d1
+CHA$d1 <- gsub ("- Del tutto negativo", "", as.character(CHA$d1))
+CHA$d1 <- gsub ("- Del tutto positivo", "", as.character(CHA$d1))
+CHA$d1 <- gsub ("Non saprei", "NA", as.character(CHA$d1))
+CHA$d1[ CHA$d1 == "NA" ] <- NA
+CHA$d1 <- as.numeric(CHA$d1)
+
+#Gov should restrict policies vs covid, d2
+CHA$d2 <- iconv(CHA$d2,"UTF-8","latin1")
+CHA$d2 <- gsub ("Alleggerire di molto le misure adottate", "0", as.character(CHA$d2))
+CHA$d2 <- gsub ("Alleggerire un pò le misure adottate", "1", as.character(CHA$d2))
+CHA$d2 <- gsub ("Mantenere le stesse misure adottate finora", "2", as.character(CHA$d2))
+CHA$d2 <- gsub ("Rendere un pò più severe le misure adottate", "3", as.character(CHA$d2))
+CHA$d2 <- gsub ("Rendere molto più severe le misure adottate", "4", as.character(CHA$d2))
+CHA$d2 <- gsub ("Non saprei", "NA", as.character(CHA$d2))
+CHA$d2[ CHA$d2 == "NA" ] <- NA
+CHA$d2 <- as.numeric(CHA$d2)
+
+#willingness restrict freedom of movement d4_01
+CHA$d4_01 <- gsub ("- Totalmente disposto", "", as.character(CHA$d4_01))
+CHA$d4_01 <- gsub ("- Per niente disposto", "", as.character(CHA$d4_01))
+CHA$d4_01 <- gsub ("Non saprei", "NA", as.character(CHA$d4_01))
+CHA$d4_01[ CHA$d4_01 == "NA" ] <- NA
+CHA$d4_01 <- as.numeric(CHA$d4_01)
+
+#willingness restrict meetings d4_02
+CHA$d4_02 <- gsub ("- Totalmente disposto", "", as.character(CHA$d4_02))
+CHA$d4_02 <- gsub ("- Per niente disposto", "", as.character(CHA$d4_02))
+CHA$d4_02 <- gsub ("Non saprei", "NA", as.character(CHA$d4_02))
+CHA$d4_02[ CHA$d4_02 == "NA" ] <- NA
+CHA$d4_02 <- as.numeric(CHA$d4_02)
+
+#economy (vs public health) d5
+CHA$d5 <- iconv(CHA$d5,"UTF-8","latin1")
+CHA$d5 <- gsub ("- Privilegiare la riduzione dei contagi, a scapito dell'economia", "", as.character(CHA$d5))
+CHA$d5 <- gsub ("- Privilegiare la difesa dell'economia, a costo di aumentare i contagi", "", as.character(CHA$d5))
+CHA$d5 <- as.numeric(CHA$d5)
+
+#interpersonal trust e1 
+CHA$e1 <- iconv(CHA$e1,"UTF-8","latin1")
+CHA$e1 <- gsub ("- Si può avere fiducia nella maggior parte delle persone", "", as.character(CHA$e1))
+CHA$e1 <- gsub ("- È meglio essere diffidenti", "", as.character(CHA$e1))
+CHA$e1 <- gsub ("Non saprei", "NA", as.character(CHA$e1))
+CHA$e1[ CHA$e1 == "NA" ] <- NA
+CHA$e1 <- as.numeric(CHA$e1)
+CHA$e1 <- 10 - CHA$e1 #i had to invert polarity
+
+#trust parliament (e2_01)
+CHA$e2_01 <- gsub ("- Assoluta mancanza di fiducia", "", as.character(CHA$e2_01))
+CHA$e2_01 <- gsub ("- Completa fiducia", "", as.character(CHA$e2_01))
+CHA$e2_01 <- gsub ("Non saprei", "NA", as.character(CHA$e2_01))
+CHA$e2_01[ CHA$e2_01 == "NA" ] <- NA
+CHA$e2_01 <- as.numeric(CHA$e2_01)
+
+#trust EU (e2_04)
+CHA$e2_04 <- gsub ("- Assoluta mancanza di fiducia", "", as.character(CHA$e2_04))
+CHA$e2_04 <- gsub ("- Completa fiducia", "", as.character(CHA$e2_04))
+CHA$e2_04 <- gsub ("Non saprei", "NA", as.character(CHA$e2_04))
+CHA$e2_04[ CHA$e2_04 == "NA" ] <- NA
+CHA$e2_04 <- as.numeric(CHA$e2_04)
+
+#regional health system (e3)
+CHA$e3 <- gsub ("- Assolutamente cattivo", "", as.character(CHA$e3))
+CHA$e3 <- gsub ("- Assolutamente buono", "", as.character(CHA$e3))
+CHA$e3 <- gsub ("Non saprei", "NA", as.character(CHA$e3))
+CHA$e3[ CHA$e3 == "NA" ] <- NA
+CHA$e3 <- as.numeric(CHA$e3)
+
+#evaluation gov conte (e4)
+CHA$e4 <- gsub ("- Giudizio completamente negativo", "", as.character(CHA$e4))
+CHA$e4 <- gsub ("- Giudizio completamente positivo", "", as.character(CHA$e4))
+CHA$e4 <- gsub ("Non saprei", "NA", as.character(CHA$e4))
+CHA$e4[ CHA$e4 == "NA" ] <- NA
+CHA$e4 <- as.numeric(CHA$e4)
+
+#evaluation pres region e5
+CHA$e5 <- gsub ("- Giudizio completamente negativo", "", as.character(CHA$e5))
+CHA$e5 <- gsub ("- Giudizio completamente positivo", "", as.character(CHA$e5))
+CHA$e5 <- gsub ("Non saprei", "NA", as.character(CHA$e5))
+CHA$e5[ CHA$e5 == "NA" ] <- NA
+CHA$e5 <- as.numeric(CHA$e5)
+
+
+#risk: your area more exposed vs italy (f2)
+CHA$f2 <- iconv(CHA$f2,"UTF-8","latin1") 
+CHA$f2 <- gsub ("Non saprei", "NA", as.character(CHA$f2))
+CHA$f2 <- gsub ("Molto meno esposto", "0", as.character(CHA$f2))
+CHA$f2 <- gsub ("Meno esposto", "1", as.character(CHA$f2))
+CHA$f2 <- gsub ("Come resto Italia", "2", as.character(CHA$f2))
+CHA$f2 <- gsub ("Più esposto", "3", as.character(CHA$f2))
+CHA$f2 <- gsub ("Molto più esposto", "4", as.character(CHA$f2))
+CHA$f2[ CHA$f2 == "NA" ] <- NA
+CHA$f2 <- as.numeric(CHA$f2)
+
+#risk: you vs people of your area (f3)
+CHA$f3 <- iconv(CHA$f3,"UTF-8","latin1") 
+CHA$f3 <- gsub ("Non saprei", "NA", as.character(CHA$f3))
+CHA$f3 <- gsub ("Molto meno esposto", "0", as.character(CHA$f3))
+CHA$f3 <- gsub ("Meno esposto", "1", as.character(CHA$f3))
+CHA$f3 <- gsub ("Come resto popolazione", "2", as.character(CHA$f3))
+CHA$f3 <- gsub ("Più esposto", "3", as.character(CHA$f3))
+CHA$f3 <- gsub ("Molto più esposto", "4", as.character(CHA$f3))
+CHA$f3[ CHA$f3 == "NA" ] <- NA
+CHA$f3 <- as.numeric(CHA$f3)
+
+#happyness g1
+CHA$g1 <- gsub ("- Del tutto infelice", "", as.character(CHA$g1))
+CHA$g1 <- gsub ("- Del tutto felice", "", as.character(CHA$g1))
+CHA$g1 <- gsub ("Non saprei", "NA", as.character(CHA$g1))
+CHA$g1[ CHA$g1 == "NA" ] <- NA
+CHA$g1 <- as.numeric(CHA$g1)
+
+#health g2
+CHA$g2 <- gsub ("Pessima", "0", as.character(CHA$g2))
+CHA$g2 <- gsub ("Cattiva", "1", as.character(CHA$g2))
+CHA$g2 <- gsub ("Discreta", "2", as.character(CHA$g2))
+CHA$g2 <- gsub ("Buona", "3", as.character(CHA$g2))
+CHA$g2 <- gsub ("Molto buona", "4", as.character(CHA$g2))
+CHA$g2 <- gsub ("Non saprei", "NA", as.character(CHA$g2))
+CHA$g2[ CHA$g2 == "NA" ] <- NA
+CHA$g2 <- as.numeric(CHA$g2)
+
+#anxiety g6_01
+CHA$g6_01 <- gsub ("Raramente o mai", "0", as.character(CHA$g6_01))
+CHA$g6_01 <- gsub ("La maggior parte del tempo", "1", as.character(CHA$g6_01))
+CHA$g6_01 <- gsub ("Qualche volta", "2", as.character(CHA$g6_01))
+CHA$g6_01 <- gsub ("Abbastanza frequentemente", "3", as.character(CHA$g6_01))
+CHA$g6_01 <- gsub ("La maggior parte del tempo", "4", as.character(CHA$g6_01))
+CHA$g6_01 <- gsub ("Preferisco non rispondere", "NA", as.character(CHA$g6_01))
+CHA$g6_01[ CHA$g6_01 == "NA" ] <- NA
+CHA$g6_01 <- as.numeric(CHA$g6_01)
+
+#depression g6_02
+CHA$g6_02 <- gsub ("Raramente o mai", "0", as.character(CHA$g6_02))
+CHA$g6_02 <- gsub ("La maggior parte del tempo", "1", as.character(CHA$g6_02))
+CHA$g6_02 <- gsub ("Qualche volta", "2", as.character(CHA$g6_02))
+CHA$g6_02 <- gsub ("Abbastanza frequentemente", "3", as.character(CHA$g6_02))
+CHA$g6_02 <- gsub ("La maggior parte del tempo", "4", as.character(CHA$g6_02))
+CHA$g6_02 <- gsub ("Preferisco non rispondere", "NA", as.character(CHA$g6_02))
+CHA$g6_02[ CHA$g6_02 == "NA" ] <- NA
+CHA$g6_02 <- as.numeric(CHA$g6_02)
+
+#science solves covid h1_01
+CHA$h1_01 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_01))
+CHA$h1_01 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_01))
+CHA$h1_01 <- gsub ("Non saprei", "NA", as.character(CHA$h1_01))
+CHA$h1_01[ CHA$h1_01 == "NA" ] <- NA
+CHA$h1_01 <- as.numeric(CHA$h1_01)
+
+#scientist must decide h1_02
+CHA$h1_02 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_02))
+CHA$h1_02 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_02))
+CHA$h1_02 <- gsub ("Non saprei", "NA", as.character(CHA$h1_02))
+CHA$h1_02[ CHA$h1_02 == "NA" ] <- NA
+CHA$h1_02 <- as.numeric(CHA$h1_02)
+
+#big pharma h1_03
+CHA$h1_03 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_03))
+CHA$h1_03 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_03))
+CHA$h1_03 <- gsub ("Non saprei", "NA", as.character(CHA$h1_03))
+CHA$h1_03[ CHA$h1_03 == "NA" ] <- NA
+CHA$h1_03 <- as.numeric(CHA$h1_03)
+CHA$h1_03 <- 10 - CHA$h1_03 #i had to invert polarity
+
+#naturopathy h1_04
+CHA$h1_04 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_04))
+CHA$h1_04 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_04))
+CHA$h1_04 <- gsub ("Non saprei", "NA", as.character(CHA$h1_04))
+CHA$h1_04[ CHA$h1_04 == "NA" ] <- NA
+CHA$h1_04 <- as.numeric(CHA$h1_04)
+CHA$h1_04 <- 10 - CHA$h1_04 #i had to invert polarity
+
+#Nature will destroy us h1_05
+CHA$h1_05 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_05))
+CHA$h1_05 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_05))
+CHA$h1_05 <- gsub ("Non saprei", "NA", as.character(CHA$h1_05))
+CHA$h1_05[ CHA$h1_05 == "NA" ] <- NA
+CHA$h1_05 <- as.numeric(CHA$h1_05)
+
+#science = opportunities h1_06
+CHA$h1_06 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_06))
+CHA$h1_06 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_06))
+CHA$h1_06 <- gsub ("Non saprei", "NA", as.character(CHA$h1_06))
+CHA$h1_06[ CHA$h1_06 == "NA" ] <- NA
+CHA$h1_06 <- as.numeric(CHA$h1_06)
+
+#data are secret h1_07
+CHA$h1_07 <- gsub ("- Completamente d'accordo", "", as.character(CHA$h1_07))
+CHA$h1_07 <- gsub ("- Per niente d'accordo", "", as.character(CHA$h1_07))
+CHA$h1_07 <- gsub ("Non saprei", "NA", as.character(CHA$h1_07))
+CHA$h1_07[ CHA$h1_07 == "NA" ] <- NA
+CHA$h1_07 <- as.numeric(CHA$h1_07)
+CHA$h1_07 <- 10 - CHA$h1_07 #i had to invert polarity
+
+
+#collective (vs private) interest j3_03
+CHA$j3_03 <- gsub ("- Completamente d'accordo", "", as.character(CHA$j3_03))
+CHA$j3_03 <- gsub ("- Completamente in disaccordo", "", as.character(CHA$j3_03))
+CHA$j3_03 <- gsub ("Non saprei", "NA", as.character(CHA$j3_03))
+CHA$j3_03[ CHA$j3_03 == "NA" ] <- NA
+CHA$j3_03 <- as.numeric(CHA$j3_03)
+
+#collective (vs private) interest j3_04
+CHA$j3_04 <- gsub ("- Completamente d'accordo", "", as.character(CHA$j3_04))
+CHA$j3_04 <- gsub ("- Completamente in disaccordo", "", as.character(CHA$j3_04))
+CHA$j3_04 <- gsub ("Non saprei", "NA", as.character(CHA$j3_04))
+CHA$j3_04[ CHA$j3_04 == "NA" ] <- NA
+CHA$j3_04 <- as.numeric(CHA$j3_04)
+
+#political ideology (k2)
+CHA$k2 <- gsub ("- Sinistra", "", as.character(CHA$k2))
+CHA$k2 <- gsub ("- Destra", "", as.character(CHA$k2))
+CHA$k2 <- gsub ("Non saprei", "NA", as.character(CHA$k2))
+CHA$k2 <- gsub ("Non si colloca", "NA", as.character(CHA$k2))
+CHA$k2[ CHA$k2 == "NA" ] <- NA
+CHA$k2 <- as.numeric(CHA$k2)
+
+#political interest k1
+CHA$k1 <- gsub ("Per niente", "0", as.character(CHA$k1))
+CHA$k1 <- gsub ("Poco", "1", as.character(CHA$k1))
+CHA$k1 <- gsub ("Non saprei", "NA", as.character(CHA$k1))
+CHA$k1 <- gsub ("Abbastanza", "2", as.character(CHA$k1))
+CHA$k1 <- gsub ("Molto", "3", as.character(CHA$k1))
+CHA$k1[ CHA$k1 == "NA" ] <- NA
+CHA$k1 <- as.numeric(CHA$k1)
+```
+
+## Reduce levels for CHA, MGM, MGM_C
+
+mgm works way better with dummy vs. Can is forced to use that type only.
+Therefore I binarize the following variables of CHA (which will later
+become MGM). Later I will also binarize all MGM, while dropping some Vs,
+to obtain another object.
+
+```{r}
+#c1
+CHA$c1[CHA$c1 == 0] <- 1
+CHA$c1[CHA$c1 == 1] <- 1
+CHA$c1[CHA$c1 == 2] <- 0
+CHA$c1[CHA$c1 == 3] <- 0
+
+#d2
+CHA$d2[CHA$d2 == 0] <- 0
+CHA$d2[CHA$d2 == 1] <- 0
+CHA$d2[CHA$d2 == 2] <- 0
+CHA$d2[CHA$d2 == 3] <- 1
+CHA$d2[CHA$d2 == 4] <- 1
+
+#g2
+CHA$g2[CHA$g2 == 0] <- 1
+CHA$g2[CHA$g2 == 1] <- 1
+CHA$g2[CHA$g2 == 2] <- 1
+CHA$g2[CHA$g2 == 3] <- 0
+CHA$g2[CHA$g2 == 4] <- 0
+
+#g6_01
+CHA$g6_01[CHA$g6_01 == 0] <- 0
+CHA$g6_01[CHA$g6_01 == 1] <- 0
+CHA$g6_01[CHA$g6_01 == 2] <- 1
+CHA$g6_01[CHA$g6_01 == 3] <- 1
+
+#g6_02
+CHA$g6_02[CHA$g6_02 == 0] <- 0
+CHA$g6_02[CHA$g6_02 == 1] <- 0
+CHA$g6_02[CHA$g6_02 == 2] <- 1
+CHA$g6_02[CHA$g6_02 == 3] <- 1
+
+#k1
+CHA$k1[CHA$k1 == 0] <- 1
+CHA$k1[CHA$k1 == 1] <- 1
+CHA$k1[CHA$k1 == 2] <- 0
+CHA$k1[CHA$k1 == 3] <- 0
+```
+
+## Control with summarize
+
+I will export this table in output only after deleting missing cases
+
+```{r}
+summary(CHA)
+```
+
+# PCA (on CHA, omitting missing)
+
+PCA, cause I want to reduce dimensions. I will work on CHA. After the
+indices I will than create the right objects.
+
+```{r}
+#compliance
+compliance <- data.frame(CHA$b2_01,CHA$b2_03,CHA$b2_05,CHA$b2_06)
+pr_compliance <- princomp(na.omit(compliance), cor = TRUE)
+pr_compliance
+```
+
+```{r}
+#w2r
+w2r <- data.frame(CHA$d4_01,CHA$d4_02)
+pr_w2r <- princomp(na.omit(w2r), cor = TRUE)
+pr_w2r
+summary(pr_w2r)
+```
+
+```{r}
+#tr
+tr <- data.frame(CHA$e2_01,CHA$e2_04)
+pr_tr <- princomp(na.omit(tr), cor = TRUE)
+pr_tr
+summary(pr_tr)
+```
+
+```{r}
+#risk
+risk <- data.frame(CHA$f2,CHA$f3)
+pr_risk <- princomp(na.omit(risk), cor = TRUE)
+pr_risk
+summary(pr_risk)
+```
+
+```{r}
+#reg
+reg <- data.frame(CHA$e3,CHA$e5)
+pr_reg <- princomp(na.omit(reg), cor = TRUE)
+pr_reg
+summary(pr_reg)
+```
+
+Till here they were monodimensional! Nice, and I knew it cause they were
+the Vs of Guglielmi.
+
+```{r}
+#sci
+sci <- data.frame(CHA$h1_01,CHA$h1_02,CHA$h1_03,CHA$h1_04,CHA$h1_05,
+                  CHA$h1_06,CHA$h1_07)
+sci <- na.omit(sci)
+pr_sci <- princomp(na.omit(sci), cor = TRUE)
+pr_sci
+summary(pr_sci)
+```
+
+Here I have to comp instead. Let's sort variable in each comp:
+
+```{r}
+eigenvec_sci <- pr_sci$loadings
+eigenval_sci <- pr_sci$sdev*pr_sci$sdev
+```
+
+```{r}
+round(cor(sci, pr_sci$scores),3) 
+```
+
+Item 5 must be dropped. 1,2,6 -\> attitude toward science 3,4,7 -\>
+attitude toward medicine I redo with this pattern and see the fit
+
+```{r}
+#attitude toward sci
+at_sci <- data.frame(CHA$h1_01,CHA$h1_02,CHA$h1_06)
+at_sci <- na.omit(at_sci)
+pr_at_sci <- princomp(na.omit(at_sci), cor = TRUE)
+pr_at_sci
+summary(pr_at_sci)
+```
+
+Nice!
+
+```{r}
+#attitude toward medicine
+at_med <- data.frame(CHA$h1_03,CHA$h1_04,CHA$h1_07)
+at_med <- na.omit(at_med)
+pr_at_med <- princomp(na.omit(at_med), cor = TRUE)
+pr_at_med
+summary(pr_at_med)
+```
+
+Nice again
+
+```{r}
+#col
+col <- data.frame(CHA$j3_03,CHA$j3_04)
+pr_col <- princomp(na.omit(col), cor = TRUE)
+pr_col
+summary(pr_col)
+```
+
+# MGM
+
+```{r}
+#listwise deletion
+MGM <- na.omit(CHA)
+head(MGM[is.na(MGM), ]) #no missing
+nrow(MGM) #cases
+```
+
+```{r}
+#indices
+comp <- data.frame(MGM$b2_01,MGM$b2_03,MGM$b2_05,MGM$b2_06)
+MGM$comp_i <- apply(MGM[3:6], 1, mean, na.rm = TRUE)
+
+w2r <- data.frame(MGM$d4_01,MGM$d4_02)
+MGM$w2r_i <- apply(MGM[10:11], 1, mean, na.rm = TRUE)
+
+tr_inst <- data.frame(MGM$e2_01,MGM$e2_04)
+MGM$tr_inst_i <- apply(MGM[14:15], 1, mean, na.rm = TRUE)
+
+risk <- data.frame(MGM$f2,MGM$f3)
+MGM$risk_i <- apply(MGM[19:20], 1, mean, na.rm = TRUE)
+
+col <- data.frame(MGM$j3_03,MGM$j3_04)
+MGM$col_i <- apply(MGM[32:33], 1, mean, na.rm = TRUE)
+
+#not ordered ones
+reg <- data.frame(MGM$e3,MGM$e5)
+MGM$reg_i <- apply(reg[1:2], 1, mean, na.rm = TRUE)
+summary(MGM$reg_i)
+
+sci <- data.frame(MGM$h1_01,MGM$h1_02,MGM$h1_06)
+MGM$sci_i <- apply(sci[1:3], 1, mean, na.rm = TRUE)
+summary(MGM$sci_i)
+
+med <- data.frame(MGM$h1_03,MGM$h1_04,MGM$h1_07)
+MGM$med_i <- apply(med[1:3], 1, mean, na.rm = TRUE)
+summary(MGM$med_i)
+
+#remove components
+MGM <- MGM[,-c(3,4,5,6,10,11,14,15,16,18,19,20,25,26,27,28,29,30,31,32,33)]
+```
+
+## MGM descriptives *printed*
+
+```{r include=FALSE}
+#summary of each V
+summary(MGM)
+stargazer(MGM, type = "html", title = "Complete dataset mgm descriptives", 
+          out = "../Output/data manag and factor/MGM descriptives.html", 
+          digits = 1, covariate.labels = c(
+  "Sex",
+  "Age",
+  "Family income",
+  "Approval governmental measures",
+  "Approval restrictive measures",
+  "Economy over public health",
+  "Horizontal trust",
+  "Support for Conte",
+  "Happiness",
+  "Health",
+  "Anxiety",
+  "Depression",
+  "L-R self-placement",
+  "Political interest",
+  "Compliance to preventive behaviors*",
+  "Willingness to restrict freedoms*",
+  "Institutional trust*",
+  "Risk perception*",
+  "Collectivism*",
+  "Support for regional system*",
+  "Attitudes toward science*",
+  "Attitudes toward medicine*"))
+```
+
+### Alpha
+
+```{r}
+#alpha cronbach for each index
+cronbach.alpha(comp, CI=TRUE, standardized=TRUE)
+cronbach.alpha(w2r, CI=TRUE, standardized=TRUE)
+cronbach.alpha(tr_inst, CI=TRUE, standardized=TRUE)
+cronbach.alpha(risk, CI=TRUE, standardized=TRUE)
+cronbach.alpha(col, CI=TRUE, standardized=TRUE)
+cronbach.alpha(reg, CI=TRUE, standardized=TRUE)
+cronbach.alpha(sci, CI=TRUE, standardized=TRUE)
+cronbach.alpha(med, CI=TRUE, standardized=TRUE)
+```
+
+### Eigenvalue
+
+```{r}
+#print of every pr_*
+pr_compliance
+pr_w2r
+pr_tr
+pr_risk
+pr_col
+pr_reg
+pr_sci #wrong, hence i do the followin two
+#if u want loadings of each v on each comp: line 460, don t run everything
+pr_at_sci
+pr_at_med
+```
+
+
+## Export MGM
+
+```{r}
+write.csv(MGM,"../Input/MGM.csv", row.names = FALSE)
+```
+
+# MGM_G
+
+This will have the variables of Guglielmi (hence, more cases, cause i
+have less variables) with full scale of each V. Levels must be 2 at
+maximum. I can start from CHA.
+
+```{r}
+#select from CHA
+MGM_G <- CHA %>% dplyr::select(
+  b2_01,
+  b2_03,
+  b2_05,
+  b2_06,
+  d4_01,
+  d4_02,
+  e2_01,
+  e2_04,
+  e4,
+  e3,
+  e5,
+  k2,
+  f2,
+  f3)
+```
+
+```{r}
+#missing listwise
+#listwise deletion
+MGM_G <- na.omit(MGM_G)
+head(MGM_G[is.na(MGM_G), ]) #no missing
+nrow(MGM_G) #cases
+```
+
+```{r}
+#indices
+MGM_G$comp_i <- apply(MGM_G[1:4], 1, mean, na.rm = TRUE)
+MGM_G$w2r_i <- apply(MGM_G[5:6], 1, mean, na.rm = TRUE)
+MGM_G$tr_inst_i <- apply(MGM_G[7:8], 1, mean, na.rm = TRUE)
+MGM_G$reg_i <- apply(MGM_G[10:11], 1, mean, na.rm = TRUE)
+MGM_G$risk_i <- apply(MGM_G[13:14], 1, mean, na.rm = TRUE)
+
+#remove components
+MGM_G <- MGM_G[,-c(1,2,3,4,5,6,7,8,10,11,13,14)]
+
+summary(MGM_G)
+```
+
+## MGM_G descriptives *printed*
+
+```{r include=FALSE}
+summary(MGM_G)
+stargazer(MGM_G, type = "html", title = "Guglielmi dataset mgm descriptives", 
+          out = "../Output/data manag and factor/MGM_G descriptives.html",
+          digits = 1, covariate.labels = c(
+  "Support for Conte",
+  "L - R selfplacement",
+  "Compliance to preventive behaviors",
+  "Willingness to restrict freedoms",
+  "Institutional trust",
+  "Support for regional system",
+  "Risk perception"))
+```
+
+## Export MGM_G
+
+```{r}
+write.csv(MGM_G,"../Input/MGM_G.csv", row.names = FALSE)
+```
+
+# CAN
+
+This will contain the same Vs of MGM_G, but binarized to fit CAN. Since
+I have to binarize, I start from MGM_G and then binarize
+
+```{r}
+CAN <- MGM_G
+```
+
+```{r}
+summary(CAN)
+```
+
+## recode CAN
+
+Everything must be dummy
+
+```{r}
+#e4, approval Conte
+CAN$e4 <- ifelse(CAN$e4 <= 5, 0, 1)
+
+#k2, LR
+CAN$k2 <- ifelse(CAN$k2 <= 5, 0, 1)
+
+#comp_i
+CAN$comp_i <- ifelse(CAN$comp_i <= 5, 0, 1)
+
+#w2r_i
+CAN$w2r_i <- ifelse(CAN$w2r_i <= 5, 0, 1)
+
+#tr_inst_i
+CAN$tr_inst_i <- ifelse(CAN$tr_inst_i <= 5, 0, 1)
+
+#reg_i
+CAN$reg_i <- ifelse(CAN$reg_i <= 5, 0, 1)
+
+#risk_i
+CAN$risk_i <- ifelse(CAN$risk_i <= 2, 0, 1)
+```
+
+## CAN descriptives *printed*
+
+```{r}
+summary(CAN)
+stargazer(CAN, type = "html", title = "Guglielmi dataset CAN descriptives", 
+          out = "../Output/data manag and factor/CAN descriptives.html",
+          digits = 1, covariate.labels = c(
+  "Support for Conte",
+  "L - R selfplacement",
+  "Compliance to preventive behaviors",
+  "Willingness to restrict freedoms",
+  "Institutional trust",
+  "Support for regional system",
+  "Risk perception"))
+```
+
+## Export CAN
+
+```{r}
+write.csv(CAN,"../Input/CAN.csv", row.names = FALSE)
+```

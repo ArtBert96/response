@@ -1,0 +1,161 @@
+---
+title: "CAN"
+output:
+  html_document: default
+  pdf_document: default
+date: '2022-10-07'
+---
+
+# Packages
+```{r message=FALSE, warning=FALSE}
+library(stats)
+library(rio)
+library(tidyverse)
+library(dplyr)
+library(lavaan)
+library(mgm) 
+library(qgraph)
+library(dplyr)
+library(haven)
+library(Matrix)
+library(igraph)
+library(NetworkComparisonTest)
+library(plyr)
+library(bootnet)
+library(openxlsx)
+library(matrixcalc)
+library(IsingSampler)
+library(IsingFit)
+library(xtable)
+library(ltm)
+```
+
+# Import data
+```{r}
+CAN <- import("../input/CAN.csv")
+summary(CAN) #nice everything is dummy
+```
+
+# Creaate objects
+```{r}
+shortnames <- c(
+  "Con",
+  "LR",
+  "comp_",
+  "w2r_",
+  "in_tr_",
+  "reg_",
+  "risk_")
+
+longnames <- c(
+  "Support for Conte",
+  "L-R self-placement",
+  "Compliance to preventive behaviors",
+  "Willingness to restrict freedoms",
+  "Institutional trust",
+  "Support for regional system",
+  "Risk perception")
+```
+
+
+# Model fit
+```{r}
+#fit
+CANFit <- IsingFit(CAN)
+
+# igraph for community detection
+CANiGraph <- graph_from_adjacency_matrix(abs(CANFit$weiadj), 
+            'undirected', weighted = TRUE, add.colnames = FALSE)
+```
+
+# Community detection
+```{r}
+#Community detection and plotting
+CAN_Com <- cluster_walktrap(CANiGraph)
+communities(CAN_Com)
+
+#colors for graph
+Totalgroup_cols <- c("#E8ED61","#8FC45A")
+```
+
+# Final graph
+```{r}
+#no min 
+pdf(file = '../Output/CAN/CAN no min.pdf', paper = "USr", 
+    height = 9, width = 12)
+qgraph(CANFit$weiadj, layout = 'spring', cut = .8, 
+       groups = communities(CAN_Com), color= Totalgroup_cols,
+       legend = TRUE, theme = 'colorblind', 
+       labels = shortnames, nodeNames = longnames,
+       legend.cex = 0.4, title = "CAN no minimum")
+dev.off()
+```
+```{r}
+#min 0.5 
+pdf(file = '../Output/CAN/CAN min 0.5.pdf', paper = "USr", 
+    height = 9, width = 12)
+qgraph(CANFit$weiadj, layout = 'spring', cut = .8, 
+       groups = communities(CAN_Com), color= Totalgroup_cols, legend = TRUE,
+       theme = 'colorblind', labels = shortnames, nodeNames = longnames,
+       minimum = 0.05, legend.cex = 0.4, title = "CAN minimum 0.5")
+dev.off()
+```
+
+```{r}
+#min 0.10 
+pdf(file = '../Output/CAN/CAN min 0.10.pdf', paper = "USr", 
+    height = 9, width = 12)
+qgraph(CANFit$weiadj, layout = 'spring', cut = .8, 
+       groups = communities(CAN_Com), color= Totalgroup_cols, legend = TRUE,
+       theme = 'colorblind', labels = shortnames, nodeNames = longnames,
+       minimum = 0.10, legend.cex = 0.4, title = "CAN minimum 0.10")
+dev.off()
+```
+
+
+# Centrality
+```{r}
+CANGraph <- qgraph(CANFit$weiadj, layout = 'spring', cut = .8,
+                   labels = longnames)
+CANCen <- centralityTable(CANGraph, standardized = FALSE)
+#pdf
+pdf(file= '../Output/CAN/Centrality Table CAN.pdf')
+centralityPlot(CANGraph, scale = 'raw')
+dev.off()
+```
+
+# Connectivity
+```{r}
+CANSPL <- centrality(CANGraph)$ShortestPathLengths
+CANSPL <- CANSPL[upper.tri(CANSPL)]
+CANASPL <- mean(CANSPL)
+CANASPL
+```
+ASPL = 1.754329
+
+# Edge accuracy
+
+```{r}
+set.seed(1)
+
+CAN_accuracy <- bootnet(CAN, 100, 'IsingFit')
+
+pdf(file = '../Output/CAN/Edge accuracy CAN.pdf')
+plot(CAN_accuracy, plot = 'interval', order = 'sample')
+dev.off()
+```
+
+
+# Centrality Stability
+
+```{r}
+set.seed(1)
+CAN_stability <- bootnet(CAN, 1000, 'IsingFit', 'person')
+
+#pdf
+pdf(file = '../Output/CAN/Centrality stability CAN.pdf')
+plot(CAN_stability, c('strength'), legend = TRUE,
+     perNode = TRUE, subsetRange = c(100,50)) 
+dev.off()
+```
+
