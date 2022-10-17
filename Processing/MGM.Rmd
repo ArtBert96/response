@@ -221,8 +221,7 @@ GraphMGM<-qgraph(inputGraphMGM,
   cut = 0.10, maximum = 1, 
   details = FALSE, vsize=6.0,
   groups=Totalgroup_comm, color= Totalgroup_cols,
-  legend = TRUE, legend.cex = 0.4,
-  title = "MGM no min")
+  legend = TRUE, legend.cex = 0.4)
 dev.off()
 
 # refined,  minimum = 0.5
@@ -233,8 +232,7 @@ GraphMGM<-qgraph(inputGraphMGM,
   cut = 0.10, minimum = 0.05, maximum = 1, 
   details = FALSE, vsize=6.0, 
   groups=Totalgroup_comm, color= Totalgroup_cols,
-  legend = TRUE, legend.cex = 0.4,
-  title = "MGM min 0.05")
+  legend = TRUE, legend.cex = 0.4)
 dev.off()
 
 # refined,  minimum = 0.10
@@ -245,7 +243,7 @@ GraphMGM<-qgraph(inputGraphMGM,
   cut = 0.10, minimum = 0.10, maximum = 1, 
   details = FALSE, vsize=6.0, legend = TRUE,
   groups=Totalgroup_comm, color= Totalgroup_cols,
-  legend.cex = 0.4, title = "MGM min 0.10")
+  legend.cex = 0.4)
 dev.off()
 ```
 # Centrality estimates

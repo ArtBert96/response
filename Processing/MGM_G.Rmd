@@ -172,7 +172,7 @@ GraphMGM_G<-qgraph(inputGraphMGM_G,
   cut = 0.10, maximum = 1, 
   details = FALSE, vsize=6.0, legend = TRUE, 
   groups=Totalgroup_comm, color= Totalgroup_cols,
-  legend.cex = 0.4, title = "MGM_G no min")
+  legend.cex = 0.4)
 dev.off()
 ```
 
@@ -185,7 +185,7 @@ GraphMGM_G<-qgraph(inputGraphMGM_G,
   cut = 0.10, minimum = 0.05, maximum = 1, 
   details = FALSE, vsize=6.0, legend = TRUE, 
   groups=Totalgroup_comm, color= Totalgroup_cols,
-  legend.cex = 0.5, title = "MGM_G min 0.05")
+  legend.cex = 0.5)
 dev.off()
 ```
 
@@ -198,7 +198,7 @@ GraphMGM_G<-qgraph(inputGraphMGM_G,
   cut = 0.10, minimum = 0.10, maximum = 1, 
   details = FALSE, vsize=6.0, legend = TRUE,
   groups=Totalgroup_comm, color= Totalgroup_cols,
-  legend.cex = 0.5, title = "MGM_G min 0.10")
+  legend.cex = 0.5)
 dev.off()
 ```
 

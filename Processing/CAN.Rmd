@@ -87,7 +87,7 @@ qgraph(CANFit$weiadj, layout = 'spring', cut = .8,
        groups = communities(CAN_Com), color= Totalgroup_cols,
        legend = TRUE, theme = 'colorblind', 
        labels = shortnames, nodeNames = longnames,
-       legend.cex = 0.4, title = "CAN no minimum")
+       legend.cex = 0.4)
 dev.off()
 ```
 ```{r}
@@ -97,7 +97,7 @@ pdf(file = '../Output/CAN/CAN min 0.5.pdf', paper = "USr",
 qgraph(CANFit$weiadj, layout = 'spring', cut = .8, 
        groups = communities(CAN_Com), color= Totalgroup_cols, legend = TRUE,
        theme = 'colorblind', labels = shortnames, nodeNames = longnames,
-       minimum = 0.05, legend.cex = 0.4, title = "CAN minimum 0.5")
+       minimum = 0.05, legend.cex = 0.4)
 dev.off()
 ```
 
@@ -108,7 +108,7 @@ pdf(file = '../Output/CAN/CAN min 0.10.pdf', paper = "USr",
 qgraph(CANFit$weiadj, layout = 'spring', cut = .8, 
        groups = communities(CAN_Com), color= Totalgroup_cols, legend = TRUE,
        theme = 'colorblind', labels = shortnames, nodeNames = longnames,
-       minimum = 0.10, legend.cex = 0.4, title = "CAN minimum 0.10")
+       minimum = 0.10, legend.cex = 0.4)
 dev.off()
 ```
 

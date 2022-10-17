@@ -189,14 +189,14 @@ GraphCAN_min5 <-qgraph(CANFit$weiadj, layout = 'spring', cut = .8,
         groups=Totalgroup_mgm, color= colors_mgm, legend = FALSE,
        theme = 'colorblind', labels = shortnames_can,nodeNames = longnames_can,
        legend.cex = 0.4, cut = 0.10, minimum = 0.05, 
-       maximum = 1, title = "CAN minimum 0.5")
+       maximum = 1, title = "CAN")
 GraphMGM_G_min5<-qgraph(inputGraphMGM_G, 
   layout = "spring", theme = "colorblind", 
   labels = shortnames_mgm,nodeNames = longnames_mgm,
   cut = 0.10, minimum = 0.05, maximum = 1, 
   details = FALSE, vsize=6.0, legend = TRUE, 
   groups=Totalgroup_mgm, color= colors_mgm,
-  legend.cex = 0.3, title = "MGM_G min 0.5")
+  legend.cex = 0.3, title = "mgm")
 dev.off()
 ```
 
@@ -211,14 +211,14 @@ GraphCAN_min10 <-qgraph(CANFit$weiadj, layout = 'spring', cut = .8,
         groups=Totalgroup_mgm, color= colors_mgm, legend = FALSE,
        theme = 'colorblind', labels = shortnames_can,nodeNames = longnames_can,
        legend.cex = 0.4, cut = 0.10, minimum = 0.10,
-       maximum = 1, title = "CAN minimum 0.10")
+       maximum = 1, title = "CAN")
 GraphMGM_G_min10<-qgraph(inputGraphMGM_G, 
   layout = "spring", theme = "colorblind", 
   labels = shortnames_mgm,nodeNames = longnames_mgm,
   cut = 0.10, minimum = 0.10, maximum = 1, 
   details = FALSE, vsize=6.0, legend = TRUE, 
   groups=Totalgroup_mgm, color= colors_mgm,
-  legend.cex = 0.3, title = "MGM_G min 0.10")
+  legend.cex = 0.3, title = "mgm")
 dev.off()
 ```
 # Centrality 
