@@ -273,7 +273,7 @@ NCT_comparison$einv.pvals[which(NCT_comparison$einv.pvals[,3] < 0.05), ]
 #input for NCTgraph
 inputNCTgraph <- inputGraphCAN - inputGraphMGM_G
 #the line below sets the not-significant edge weight differences 
-#in the upper triangle of the input matrix to 0
+#in the upper triangle of the input matrix to 0.05
 inputNCTgraph[upper.tri(inputNCTgraph)][which(NCT_comparison$einv.pvals$`p-value` >= .05)] <- 0 
 #this sets the lower triangle of the matrix to be symmetric 
 #with the upper triangle
